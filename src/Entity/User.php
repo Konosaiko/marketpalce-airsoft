@@ -39,6 +39,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Listing::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $sells;
 
+    #[ORM\Column(length: 255)]
+    private ?string $email = null;
+
     public function __construct()
     {
         $this->sells = new ArrayCollection();
@@ -145,6 +148,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
                 $sell->setUser(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(string $email): static
+    {
+        $this->email = $email;
 
         return $this;
     }
