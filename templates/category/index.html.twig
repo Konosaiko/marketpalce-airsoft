@@ -12,29 +12,30 @@
             <thead>
             <tr>
                 <th>Nom</th>
-                <th>Sous-catégories</th>
+                <th>Type</th>
                 <th>Actions</th>
             </tr>
             </thead>
             <tbody>
-            {% for mainCategory in mainCategories %}
+            {% for category in categories %}
                 <tr>
-                    <td>{{ mainCategory.name }}</td>
                     <td>
-                        {% if mainCategory.children|length > 0 %}
-                            <ul>
-                                {% for subCategory in mainCategory.children %}
-                                    <li>{{ subCategory.name }}</li>
-                                {% endfor %}
-                            </ul>
+                        {% if category.parent %}
+                            &nbsp;&nbsp;&nbsp;&nbsp;
+                        {% endif %}
+                        {{ category.name }}
+                    </td>
+                    <td>
+                        {% if category.parent %}
+                            Sous-catégorie de {{ category.parent.name }}
                         {% else %}
-                            Aucune sous-catégorie
+                            Catégorie principale
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{{ path('app_category_edit', {'id': mainCategory.id}) }}" class="btn btn-sm btn-outline-primary">Modifier</a>
-                        <form method="post" action="{{ path('app_category_delete', {'id': mainCategory.id}) }}" style="display: inline-block" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?');">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ mainCategory.id) }}">
+                        <a href="{{ path('app_category_edit', {'id': category.id}) }}" class="btn btn-sm btn-outline-primary">Modifier</a>
+                        <form method="post" action="{{ path('app_category_delete', {'id': category.id}) }}" style="display: inline-block" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ category.id) }}">
                             <button class="btn btn-sm btn-outline-danger">Supprimer</button>
                         </form>
                     </td>
