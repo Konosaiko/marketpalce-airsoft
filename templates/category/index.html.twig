@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des catégories{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1>Liste des catégories</h1>
+
+        <a href="{{ path('app_category_new') }}" class="btn btn-primary mb-3">Créer une nouvelle catégorie</a>
+
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Sous-catégories</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for mainCategory in mainCategories %}
+                <tr>
+                    <td>{{ mainCategory.name }}</td>
+                    <td>
+                        {% if mainCategory.children|length > 0 %}
+                            <ul>
+                                {% for subCategory in mainCategory.children %}
+                                    <li>{{ subCategory.name }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            Aucune sous-catégorie
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ path('app_category_edit', {'id': mainCategory.id}) }}" class="btn btn-sm btn-outline-primary">Modifier</a>
+                        <form method="post" action="{{ path('app_category_delete', {'id': mainCategory.id}) }}" style="display: inline-block" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ mainCategory.id) }}">
+                            <button class="btn btn-sm btn-outline-danger">Supprimer</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="3">Aucune catégorie trouvée</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
