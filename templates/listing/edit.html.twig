@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier l'annonce{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1 class="mb-4">Modifier l'annonce</h1>
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
+        <div class="mb-3">
+            {{ form_label(form.title, 'Titre de l\'annonce', {'label_attr': {'class': 'form-label'}}) }}
+            {{ form_widget(form.title, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.title) }}
+        </div>
+
+        <div class="mb-3">
+            {{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label'}}) }}
+            {{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 5}}) }}
+            {{ form_errors(form.description) }}
+        </div>
+
+        <div class="mb-3">
+            {{ form_label(form.price, 'Prix', {'label_attr': {'class': 'form-label'}}) }}
+            {{ form_widget(form.price, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.price) }}
+        </div>
+
+        <div class="mb-3">
+            {{ form_label(form.state, 'État', {'label_attr': {'class': 'form-label'}}) }}
+            {{ form_widget(form.state, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.state) }}
+        </div>
+
+        <div class="mb-3">
+            {{ form_label(form.categories, 'Catégories', {'label_attr': {'class': 'form-label'}}) }}
+            {{ form_widget(form.categories, {'attr': {'class': 'form-check'}}) }}
+            {{ form_errors(form.categories) }}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Mettre à jour l'annonce</button>
+        {{ form_end(form) }}
+
+        <hr class="mt-4 mb-4">
+
+        <h2>Supprimer l'annonce</h2>
+        <p>Attention : cette action est irréversible.</p>
+        <form method="post" action="{{ path('app_listing_delete', {'id': listing.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?');">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ listing.id) }}">
+            <button type="submit" class="btn btn-danger">Supprimer l'annonce</button>
+        </form>
+
+    </div>
+{% endblock %}

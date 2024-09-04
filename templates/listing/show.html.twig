@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ listing.title }}{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1 class="mb-4">{{ listing.title }}</h1>
+
+        <div class="row">
+            <div class="col-md-8">
+                {% if listing.listingPhotos|length > 0 %}
+                    <div id="listingCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            {% for photo in listing.listingPhotos %}
+                                <div class="carousel-item {% if loop.first %}active{% endif %}">
+                                    <img src="{{ asset('uploads/listings_photos/' ~ photo.filename) }}" class="d-block w-100" alt="Photo de l'annonce">
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if listing.listingPhotos|length > 1 %}
+                            <button class="carousel-control-prev" type="button" data-bs-target="#listingCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#listingCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {# Le reste du template reste inchangé #}
+                <p class="lead">{{ listing.description }}</p>
+                <p><strong>État :</strong> {{ listing.state }}</p>
+                <p><strong>Prix :</strong> {{ listing.price|number_format(2, ',', ' ') }} €</p>
+                <p><strong>Catégories :</strong>
+                    {% for category in listing.categories %}
+                        <span class="badge bg-secondary">{{ category.name }}</span>
+                    {% endfor %}
+                </p>
+                <p><strong>Date de création :</strong> {{ listing.createdAt|date('d/m/Y H:i') }}</p>
+                <p><strong>Vendeur :</strong> {{ listing.user.username }}</p>
+            </div>
+            <div class="col-md-4">
+                {% if app.user == listing.user %}
+                    <a href="{{ path('app_listing_edit', {'slug': listing.slug}) }}" class="btn btn-primary mb-2">Modifier l'annonce</a>
+                    <form method="post" action="{{ path('app_listing_delete', {'slug': listing.slug}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ listing.id) }}">
+                        <button type="submit" class="btn btn-danger">Supprimer l'annonce</button>
+                    </form>
+                {% else %}
+                    <button class="btn btn-success">Contacter le vendeur</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
