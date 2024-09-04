@@ -39,15 +39,22 @@ class Listing
     /**
      * @var Collection<int, Category>
      */
-    #[ORM\ManyToMany(targetEntity: Category::class, mappedBy: 'sell')]
+    #[ORM\ManyToMany(targetEntity: Category::class, inversedBy: 'listings')]
     private Collection $categories;
 
     #[ORM\Column(length: 255)]
     private ?string $slug = null;
 
+    /**
+     * @var Collection<int, ListingPhoto>
+     */
+    #[ORM\OneToMany(targetEntity: ListingPhoto::class, mappedBy: 'listing', cascade: ['persist'], orphanRemoval: true)]
+    private Collection $listingPhotos;
+
     public function __construct()
     {
         $this->categories = new ArrayCollection();
+        $this->listingPhotos = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -171,5 +178,35 @@ class Listing
         if (!$this->slug || '-' === $this->slug) {
             $this->slug = (string) $slugger->slug((string) $this->getTitle())->lower();
         }
+    }
+
+    /**
+     * @return Collection<int, ListingPhoto>
+     */
+    public function getListingPhotos(): Collection
+    {
+        return $this->listingPhotos;
+    }
+
+    public function addListingPhoto(ListingPhoto $listingPhoto): static
+    {
+        if (!$this->listingPhotos->contains($listingPhoto)) {
+            $this->listingPhotos->add($listingPhoto);
+            $listingPhoto->setListing($this);
+        }
+
+        return $this;
+    }
+
+    public function removeListingPhoto(ListingPhoto $listingPhoto): static
+    {
+        if ($this->listingPhotos->removeElement($listingPhoto)) {
+            // set the owning side to null (unless already changed)
+            if ($listingPhoto->getListing() === $this) {
+                $listingPhoto->setListing(null);
+            }
+        }
+
+        return $this;
     }
 }
