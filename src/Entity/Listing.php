@@ -51,6 +51,15 @@ class Listing
     #[ORM\OneToMany(targetEntity: ListingPhoto::class, mappedBy: 'listing', cascade: ['persist'], orphanRemoval: true)]
     private Collection $listingPhotos;
 
+    #[ORM\Column(length: 255)]
+    private ?string $region = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $department = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $city = null;
+
     public function __construct()
     {
         $this->categories = new ArrayCollection();
@@ -206,6 +215,42 @@ class Listing
                 $listingPhoto->setListing(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getRegion(): ?string
+    {
+        return $this->region;
+    }
+
+    public function setRegion(string $region): static
+    {
+        $this->region = $region;
+
+        return $this;
+    }
+
+    public function getDepartment(): ?string
+    {
+        return $this->department;
+    }
+
+    public function setDepartment(string $department): static
+    {
+        $this->department = $department;
+
+        return $this;
+    }
+
+    public function getCity(): ?string
+    {
+        return $this->city;
+    }
+
+    public function setCity(string $city): static
+    {
+        $this->city = $city;
 
         return $this;
     }
