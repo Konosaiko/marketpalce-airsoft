@@ -4,10 +4,13 @@ namespace App\Controller;
 
 use App\Entity\Listing;
 use App\Entity\ListingPhoto;
+use App\Entity\Region;
 use App\Form\ListingFormType;
+use App\Repository\DepartmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -31,6 +34,12 @@ class ListingController extends AbstractController
 
             $slug = $slugger->slug($listing->getTitle())->lower();
             $listing->setSlug($slug);
+
+            // Gérer la région et le département
+            $region = $form->get('region')->getData();
+            $department = $form->get('department')->getData();
+            $listing->setRegion($region->getName());
+            $listing->setDepartment($department->getName());
 
             $photoFiles = $form->get('photoFiles')->getData();
             foreach ($photoFiles as $photoFile) {
@@ -63,6 +72,18 @@ class ListingController extends AbstractController
         return $this->render('listing/new.html.twig', [
             'form' => $form->createView(),
         ]);
+    }
+
+    #[Route('/get-departments/{id}', name: 'app_get_departments', methods: ['GET'])]
+    public function getDepartments(Region $region, DepartmentRepository $departmentRepository): JsonResponse
+    {
+        $departments = $departmentRepository->findBy(['region' => $region]);
+
+        $departmentsArray = array_map(function($department) {
+            return ['id' => $department->getId(), 'name' => $department->getName()];
+        }, $departments);
+
+        return new JsonResponse($departmentsArray);
     }
 
     #[Route('/edit/{slug}', name: 'app_listing_edit')]
