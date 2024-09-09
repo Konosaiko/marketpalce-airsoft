@@ -21,7 +21,7 @@ class Department
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\ManyToOne(inversedBy: 'departments')]
+    #[ORM\ManyToOne(targetEntity: Region::class, inversedBy: 'departments')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Region $region = null;
 
