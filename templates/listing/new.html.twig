@@ -3,10 +3,51 @@
 {% block title %}Nouvelle annonce{% endblock %}
 
 {% block body %}
-    <h1>Créer une nouvelle annonce</h1>
+    <div class="container mt-4">
+        <h1>Créer une nouvelle annonce</h1>
 
-    {{ form_start(form) }}
-    {{ form_widget(form) }}
-    <button type="submit" class="btn btn-primary">Créer l'annonce</button>
-    {{ form_end(form) }}
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button class="btn btn-primary">Créer</button>
+        {{ form_end(form) }}
+
+        <a href="{{ path('app_listing_new') }}" class="btn btn-secondary mt-3">Retour à l'accueil</a>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var regionSelect = document.querySelector('#listing_form_region');
+            var departmentSelect = document.querySelector('#listing_form_department');
+
+            function updateDepartments(regionId) {
+                departmentSelect.innerHTML = '<option value="">Sélectionnez un département</option>';
+                departmentSelect.disabled = true;
+
+                if (regionId) {
+                    fetch('{{ path('app_get_departments', {'id': 'REGION_ID'}) }}'.replace('REGION_ID', regionId))
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(function(department) {
+                                var option = new Option(department.name, department.id);
+                                departmentSelect.add(option);
+                            });
+                            departmentSelect.disabled = false;
+                        })
+                        .catch(error => console.error('Error:', error));
+                }
+            }
+
+            regionSelect.addEventListener('change', function() {
+                updateDepartments(this.value);
+            });
+
+            // Initial load of departments if a region is already selected
+            if (regionSelect.value) {
+                updateDepartments(regionSelect.value);
+            }
+        });
+    </script>
 {% endblock %}
