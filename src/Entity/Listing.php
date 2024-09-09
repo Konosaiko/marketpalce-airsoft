@@ -57,9 +57,6 @@ class Listing
     #[ORM\Column(length: 255)]
     private ?string $department = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $city = null;
-
     public function __construct()
     {
         $this->categories = new ArrayCollection();
@@ -242,16 +239,5 @@ class Listing
 
         return $this;
     }
-
-    public function getCity(): ?string
-    {
-        return $this->city;
-    }
-
-    public function setCity(string $city): static
-    {
-        $this->city = $city;
-
-        return $this;
-    }
+    
 }
