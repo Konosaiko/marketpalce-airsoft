@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Listing;
+use App\Entity\Region;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -16,13 +17,21 @@ class ListingRepository extends ServiceEntityRepository
         parent::__construct($registry, Listing::class);
     }
 
-    public function search(string $query)
+    public function search(?string $query, ?Region $region)
     {
-        return $this->createQueryBuilder('l')
-            ->where('l.title LIKE :query')
-            ->orWhere('l.description LIKE :query')
-            ->setParameter('query', '%'.$query.'%')
-            ->orderBy('l.createdAt', 'DESC')
+        $qb = $this->createQueryBuilder('l');
+
+        if ($query) {
+            $qb->andWhere('l.title LIKE :query OR l.description LIKE :query')
+                ->setParameter('query', '%'.$query.'%');
+        }
+
+        if ($region) {
+            $qb->andWhere('l.region = :region')
+                ->setParameter('region', $region->getName());
+        }
+
+        return $qb->orderBy('l.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
     }
