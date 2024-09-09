@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Department;
 use App\Entity\Listing;
 use App\Entity\Region;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -17,7 +18,7 @@ class ListingRepository extends ServiceEntityRepository
         parent::__construct($registry, Listing::class);
     }
 
-    public function search(?string $query, ?Region $region)
+    public function search(?string $query, ?Region $region, ?Department $department)
     {
         $qb = $this->createQueryBuilder('l');
 
@@ -29,6 +30,11 @@ class ListingRepository extends ServiceEntityRepository
         if ($region) {
             $qb->andWhere('l.region = :region')
                 ->setParameter('region', $region->getName());
+        }
+
+        if ($department) {
+            $qb->andWhere('l.department = :department')
+                ->setParameter('department', $department->getName());
         }
 
         return $qb->orderBy('l.createdAt', 'DESC')

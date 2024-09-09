@@ -22,7 +22,8 @@ class SearchController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $query = $form->get('query')->getData();
             $region = $form->get('region')->getData();
-            $results = $listingRepository->search($query, $region);
+            $department = $form->get('department')->getData();
+            $results = $listingRepository->search($query, $region, $department);
         }
 
         return $this->render('search/index.html.twig', [
