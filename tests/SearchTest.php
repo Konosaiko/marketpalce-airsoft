@@ -10,7 +10,7 @@ use App\Repository\ListingRepository;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 
-class ListingRepositoryTest extends KernelTestCase
+class SearchTest extends KernelTestCase
 {
     private EntityManagerInterface $entityManager;
     private ListingRepository $listingRepository;
@@ -27,13 +27,11 @@ class ListingRepositoryTest extends KernelTestCase
 
         $this->listingRepository = $this->entityManager->getRepository(Listing::class);
 
-        // Créez des données de test ici
         $this->createTestData();
     }
 
     private function createTestData(): void
     {
-        // Créer un utilisateur de test avec un nom unique
         $username = 'testuser_' . uniqid();
         $user = new User();
         $user->setUsername($username);
@@ -51,17 +49,22 @@ class ListingRepositoryTest extends KernelTestCase
         $this->department->setRegion($this->region);
         $this->entityManager->persist($this->department);
 
-        // Créer deux annonces pour la même région et le même département
-        for ($i = 1; $i <= 2; $i++) {
+        $listings = [
+            ['Réplique AK47 1', 200.00, new \DateTimeImmutable('2023-01-01')],
+            ['Réplique AK47 2', 150.00, new \DateTimeImmutable('2023-02-01')],
+            ['Réplique M4 1', 300.00, new \DateTimeImmutable('2023-03-01')],
+        ];
+
+        foreach ($listings as $listingData) {
             $listing = new Listing();
-            $listing->setTitle('Réplique AK47 ' . $i);
+            $listing->setTitle($listingData[0]);
             $listing->setDescription('Très bon état, peu utilisée');
-            $listing->setPrice(200.00);
+            $listing->setPrice($listingData[1]);
             $listing->setState('Bon état');
             $listing->setRegion($this->region->getName());
             $listing->setDepartment($this->department->getName());
-            $listing->setCreatedAt(new \DateTimeImmutable());
-            $listing->setSlug('replique-ak47-' . uniqid());
+            $listing->setCreatedAt($listingData[2]);
+            $listing->setSlug(strtolower(str_replace(' ', '-', $listingData[0]) . '-' . uniqid()));
             $listing->setUser($user);
             $this->entityManager->persist($listing);
         }
@@ -73,19 +76,21 @@ class ListingRepositoryTest extends KernelTestCase
     {
         $results = $this->listingRepository->search('AK47', null, null);
         $this->assertCount(2, $results);
-        $this->assertEquals('Réplique AK47 1', $results[0]->getTitle());
+        $titles = array_map(function($listing) { return $listing->getTitle(); }, $results);
+        $this->assertContains('Réplique AK47 1', $titles);
+        $this->assertContains('Réplique AK47 2', $titles);
     }
 
     public function testSearchByRegion(): void
     {
         $results = $this->listingRepository->search(null, $this->region, null);
-        $this->assertCount(2, $results);
+        $this->assertCount(3, $results);
     }
 
     public function testSearchByDepartment(): void
     {
         $results = $this->listingRepository->search(null, null, $this->department);
-        $this->assertCount(2, $results);
+        $this->assertCount(3, $results);
     }
 
     public function testSearchByQueryAndRegion(): void
@@ -100,17 +105,47 @@ class ListingRepositoryTest extends KernelTestCase
         $this->assertCount(0, $results);
     }
 
+    public function testSearchSortByPriceAsc(): void
+    {
+        $results = $this->listingRepository->search(null, null, null, 'price', 'ASC');
+        $this->assertCount(3, $results);
+        $this->assertEquals(150.00, $results[0]->getPrice());
+        $this->assertEquals(300.00, $results[2]->getPrice());
+    }
+
+    public function testSearchSortByPriceDesc(): void
+    {
+        $results = $this->listingRepository->search(null, null, null, 'price', 'DESC');
+        $this->assertCount(3, $results);
+        $this->assertEquals(300.00, $results[0]->getPrice());
+        $this->assertEquals(150.00, $results[2]->getPrice());
+    }
+
+    public function testSearchSortByCreatedAtAsc(): void
+    {
+        $results = $this->listingRepository->search(null, null, null, 'createdAt', 'ASC');
+        $this->assertCount(3, $results);
+        $this->assertEquals('2023-01-01', $results[0]->getCreatedAt()->format('Y-m-d'));
+        $this->assertEquals('2023-03-01', $results[2]->getCreatedAt()->format('Y-m-d'));
+    }
+
+    public function testSearchSortByCreatedAtDesc(): void
+    {
+        $results = $this->listingRepository->search(null, null, null, 'createdAt', 'DESC');
+        $this->assertCount(3, $results);
+        $this->assertEquals('2023-03-01', $results[0]->getCreatedAt()->format('Y-m-d'));
+        $this->assertEquals('2023-01-01', $results[2]->getCreatedAt()->format('Y-m-d'));
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
 
-        // Supprimez les données de test
         $this->entityManager->createQuery('DELETE FROM App\Entity\Listing')->execute();
         $this->entityManager->createQuery('DELETE FROM App\Entity\Department')->execute();
         $this->entityManager->createQuery('DELETE FROM App\Entity\Region')->execute();
         $this->entityManager->createQuery('DELETE FROM App\Entity\User')->execute();
 
         $this->entityManager->close();
-
     }
 }
