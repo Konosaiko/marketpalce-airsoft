@@ -51,6 +51,8 @@ class Listing
     #[ORM\OneToMany(targetEntity: ListingPhoto::class, mappedBy: 'listing', cascade: ['persist'], orphanRemoval: true)]
     private Collection $listingPhotos;
 
+    private ?array $photoFiles = null;
+
     #[ORM\Column(length: 255)]
     private ?string $region = null;
 
@@ -152,7 +154,7 @@ class Listing
     {
         if (!$this->categories->contains($category)) {
             $this->categories->add($category);
-            $category->addSell($this);
+            $category->addListing($this);
         }
 
         return $this;
@@ -161,7 +163,7 @@ class Listing
     public function removeCategory(Category $category): static
     {
         if ($this->categories->removeElement($category)) {
-            $category->removeSell($this);
+            $category->removeListing($this);
         }
 
         return $this;
@@ -239,5 +241,15 @@ class Listing
 
         return $this;
     }
-    
+
+    public function getPhotoFiles(): ?array
+    {
+        return $this->photoFiles;
+    }
+
+    public function setPhotoFiles(?array $photoFiles): self
+    {
+        $this->photoFiles = $photoFiles;
+        return $this;
+    }
 }
