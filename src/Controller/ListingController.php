@@ -3,66 +3,47 @@
 namespace App\Controller;
 
 use App\Entity\Listing;
-use App\Entity\ListingPhoto;
 use App\Entity\Region;
+use App\Entity\User;
 use App\Form\ListingFormType;
 use App\Repository\DepartmentRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\ListingService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\String\Slugger\SluggerInterface;
 
 #[Route('/listing')]
 class ListingController extends AbstractController
 {
+    private ListingService $listingService;
+
+    public function __construct(ListingService $listingService)
+    {
+        $this->listingService = $listingService;
+    }
+
     #[Route('/new', name: 'app_listing_new')]
     #[IsGranted("ROLE_USER")]
-    public function new(Request $request, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
+    public function new(Request $request): Response
     {
-        $listing = new Listing();
-        $form = $this->createForm(ListingFormType::class, $listing);
+        $form = $this->createForm(ListingFormType::class);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $listing->setUser($this->getUser());
-            $listing->setCreatedAt(new \DateTimeImmutable());
-
-            $slug = $slugger->slug($listing->getTitle())->lower();
-            $listing->setSlug($slug);
-
-            // Gérer la région et le département
-            $region = $form->get('region')->getData();
-            $department = $form->get('department')->getData();
-            $listing->setRegion($region->getName());
-            $listing->setDepartment($department->getName());
-
-            $photoFiles = $form->get('photoFiles')->getData();
-            foreach ($photoFiles as $photoFile) {
-                $originalFilename = pathinfo($photoFile->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeFilename = $slugger->slug($originalFilename);
-                $newFilename = $safeFilename.'-'.uniqid().'.'.$photoFile->guessExtension();
-
-                try {
-                    $photoFile->move(
-                        $this->getParameter('listings_photos_directory'),
-                        $newFilename
-                    );
-                } catch (FileException $e) {
-                    // ... handle exception if something happens during file upload
-                }
-
-                $photo = new ListingPhoto();
-                $photo->setFilename($newFilename);
-                $listing->addListingPhoto($photo);
+            $user = $this->getUser();
+            if (!$user instanceof User) {
+                throw $this->createAccessDeniedException('Vous devez être connecté pour créer une annonce.');
             }
 
-            $entityManager->persist($listing);
-            $entityManager->flush();
+            $listingData = $form->getData();
+            $listingData->setRegion($form->get('region')->getData()->getName());
+            $listingData->setDepartment($form->get('department')->getData()->getName());
+            $listingData->setPhotoFiles($form->get('photoFiles')->getData());
+
+            $this->listingService->createListing($listingData, $user);
 
             $this->addFlash('success', 'Annonce créée avec succès.');
 
@@ -87,27 +68,21 @@ class ListingController extends AbstractController
     }
 
     #[Route('/edit/{slug}', name: 'app_listing_edit')]
-    public function edit(Request $request, Listing $listing, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
+    public function edit(Request $request, Listing $listing): Response
     {
         if ($listing->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException('Vous n\'êtes pas autorisé à modifier cette annonce.');
         }
 
-        $originalTitle = $listing->getTitle();
         $form = $this->createForm(ListingFormType::class, $listing);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if ($originalTitle !== $listing->getTitle()) {
-                $slug = $slugger->slug($listing->getTitle())->lower();
-                $listing->setSlug($slug);
-            }
-
-            $entityManager->flush();
+            $this->listingService->updateListing($listing, $form->getData());
 
             $this->addFlash('success', 'Votre annonce a été mise à jour avec succès.');
 
-            return $this->redirectToRoute('app_listing_show', ['id' => $listing->getId()]);
+            return $this->redirectToRoute('app_listing_show', ['slug' => $listing->getSlug()]);
         }
 
         return $this->render('listing/edit.html.twig', [
@@ -117,21 +92,18 @@ class ListingController extends AbstractController
     }
 
     #[Route('/delete/{slug}', name: 'app_listing_delete')]
-    public function delete(Request $request, Listing $listing, EntityManagerInterface $entityManager): Response
+    public function delete(Request $request, Listing $listing): Response
     {
         if ($listing->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException('Vous ne pouvez pas supprimer cette anonce.');
+            throw $this->createAccessDeniedException('Vous ne pouvez pas supprimer cette annonce.');
         }
 
         if ($this->isCsrfTokenValid('delete'.$listing->getId(), $request->request->get('_token'))) {
-            $entityManager->remove($listing);
-            $entityManager->flush();
-
+            $this->listingService->deleteListing($listing);
             $this->addFlash('success', 'Votre annonce a été supprimée avec succès.');
         }
 
         return $this->redirectToRoute('app_home');
-
     }
 
     #[Route('/{slug}', name: 'app_listing_show', methods: ['GET'])]
