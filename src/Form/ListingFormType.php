@@ -57,13 +57,18 @@ class ListingFormType extends AbstractType
             $form = $event->getForm();
             $listing = $event->getData();
 
-            $region = $listing->getRegion() ? $this->entityManager->getRepository(Region::class)->findOneBy(['name' => $listing->getRegion()]) : null;
+            $region = null;
+            if ($listing instanceof Listing && $listing->getRegion()) {
+                $region = $this->entityManager->getRepository(Region::class)->findOneBy(['name' => $listing->getRegion()]);
+            }
+
             $this->addDepartmentField($form, $region);
         });
 
         $builder->get('region')->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event) {
-            $form = $event->getForm();
-            $this->addDepartmentField($form->getParent(), $form->getData());
+            $form = $event->getForm()->getParent();
+            $region = $event->getForm()->getData();
+            $this->addDepartmentField($form, $region);
         });
 
         $builder->add('photoFiles', FileType::class, [
