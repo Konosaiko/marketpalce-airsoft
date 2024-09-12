@@ -18,7 +18,7 @@ class ListingRepository extends ServiceEntityRepository
         parent::__construct($registry, Listing::class);
     }
 
-    public function search(?string $query, ?Region $region, ?Department $department)
+    public function search(?string $query, ?Region $region, ?Department $department, ?string $sortBy = 'createdAt', string $sortOrder = 'DESC')
     {
         $qb = $this->createQueryBuilder('l');
 
@@ -37,8 +37,16 @@ class ListingRepository extends ServiceEntityRepository
                 ->setParameter('department', $department->getName());
         }
 
-        return $qb->orderBy('l.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
+        switch ($sortBy) {
+            case 'price':
+                $qb->orderBy('l.price', $sortOrder);
+                break;
+            case 'createdAt':
+            default:
+                $qb->orderBy('l.createdAt', $sortOrder);
+                break;
+        }
+
+        return $qb->getQuery()->getResult();
     }
 }
