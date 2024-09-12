@@ -6,15 +6,20 @@
     <div class="container mt-4">
         <h1>Recherche</h1>
 
-        {{ form_start(form) }}
-        {{ form_row(form.query) }}
-        {{ form_row(form.region) }}
-        {{ form_row(form.department) }}
-        {{ form_row(form.search) }}
-        {{ form_end(form) }}
+        {{ form(form) }}
 
         {% if results is not empty %}
             <h2 class="mt-4">Résultats de la recherche</h2>
+
+            <div class="mb-3">
+                Trier par :
+                <a href="{{ path('app_listing_search', app.request.query.all|merge({'sortBy': 'createdAt', 'sortOrder': 'DESC'})) }}" class="btn btn-sm btn-outline-primary">Par défaut</a> |
+                <a href="{{ path('app_listing_search', app.request.query.all|merge({'sortBy': 'price', 'sortOrder': 'ASC'})) }}">Prix croissant</a> |
+                <a href="{{ path('app_listing_search', app.request.query.all|merge({'sortBy': 'price', 'sortOrder': 'DESC'})) }}">Prix décroissant</a> |
+                <a href="{{ path('app_listing_search', app.request.query.all|merge({'sortBy': 'createdAt', 'sortOrder': 'DESC'})) }}">Plus récent</a> |
+                <a href="{{ path('app_listing_search', app.request.query.all|merge({'sortBy': 'createdAt', 'sortOrder': 'ASC'})) }}">Plus ancien</a>
+            </div>
+
             <div class="row">
                 {% for listing in results %}
                     <div class="col-md-4 mb-4">
@@ -25,6 +30,7 @@
                                 <p class="card-text"><small class="text-muted">Prix: {{ listing.price }} €</small></p>
                                 <p class="card-text"><small class="text-muted">Région: {{ listing.region }}</small></p>
                                 <p class="card-text"><small class="text-muted">Département: {{ listing.department }}</small></p>
+                                <p class="card-text"><small class="text-muted">Date: {{ listing.createdAt|date('d/m/Y') }}</small></p>
                                 <a href="{{ path('app_listing_show', {'slug': listing.slug}) }}" class="btn btn-primary">Voir l'annonce</a>
                             </div>
                         </div>
