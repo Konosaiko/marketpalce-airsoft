@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier le profil{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1>Modifier le profil</h1>
+
+        {{ form_start(form) }}
+        <div class="mb-3">
+            {{ form_row(form.username) }}
+        </div>
+        <div class="mb-3">
+            {{ form_row(form.email) }}
+        </div>
+        <div class="mb-3">
+            {{ form_row(form.newPassword) }}
+        </div>
+        <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+        {{ form_end(form) }}
+
+        <a href="{{ path('app_profile') }}" class="btn btn-secondary mt-3">Retour au profil</a>
+    </div>
+{% endblock %}
