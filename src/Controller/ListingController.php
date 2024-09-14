@@ -6,6 +6,7 @@ use App\Entity\Listing;
 use App\Entity\Region;
 use App\Entity\User;
 use App\Form\ListingFormType;
+use App\Form\MessageFormType;
 use App\Repository\DepartmentRepository;
 use App\Service\ListingService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -111,6 +112,37 @@ class ListingController extends AbstractController
     {
         return $this->render('listing/show.html.twig', [
             'listing' => $listing,
+        ]);
+    }
+
+    #[Route('/{slug}/contact', name: 'app_listing_contact')]
+    #[IsGranted('ROLE_USER')]
+    public function contact(Request $request, Listing $listing): Response
+    {
+        $sender = $this->getUser();
+        if (!$sender instanceof User) {
+            throw $this->createAccessDeniedException('Vous devez être connecté pour envoyer un message.');
+        }
+
+        $form = $this->createForm(MessageFormType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $content = $form->get('content')->getData();
+
+            try {
+                $this->listingService->contactSeller($sender, $listing, $content);
+                $this->addFlash('success', 'Votre message a été envoyé avec succès.');
+            } catch (\InvalidArgumentException $e) {
+                $this->addFlash('error', $e->getMessage());
+            }
+
+            return $this->redirectToRoute('app_listing_show', ['slug' => $listing->getSlug()]);
+        }
+
+        return $this->render('message/new.html.twig', [
+            'listing' => $listing,
+            'form' => $form->createView(),
         ]);
     }
 }

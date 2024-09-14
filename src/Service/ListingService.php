@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use AllowDynamicProperties;
 use App\Entity\Listing;
 use App\Entity\ListingPhoto;
 use App\Entity\User;
@@ -10,13 +11,19 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
-class ListingService
+#[AllowDynamicProperties] class ListingService
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private SluggerInterface $slugger,
-        private string $listingsPhotoDirectory
-    ) {}
+        EntityManagerInterface $entityManager,
+        SluggerInterface $slugger,
+        string $listingsPhotoDirectory,
+        MessageService $messageService
+    ) {
+        $this->entityManager = $entityManager;
+        $this->slugger = $slugger;
+        $this->listingsPhotoDirectory = $listingsPhotoDirectory;
+        $this->messageService = $messageService;
+    }
 
     public function createListing(Listing $listing, User $user): Listing
     {
@@ -72,5 +79,16 @@ class ListingService
         }
 
         return $newFilename;
+    }
+
+    public function contactSeller(User $sender, Listing $listing, string $content): void
+    {
+        $recipient = $listing->getUser();
+
+        if ($sender === $recipient) {
+            throw new \InvalidArgumentException('Vous ne pouvez pas vous envoyer un message à vous-même.');
+        }
+
+        $this->messageService->sendMessage($sender, $recipient, $content);
     }
 }
