@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+    {% if listing is defined %}
+        Contacter le vendeur - {{ listing.title }}
+    {% else %}
+        Nouveau message à {{ recipient.username }}
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1>
+            {% if listing is defined %}
+                Contacter le vendeur à propos de : {{ listing.title }}
+            {% else %}
+                Nouveau message à {{ recipient.username }}
+            {% endif %}
+        </h1>
+
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button type="submit" class="btn btn-primary">Envoyer</button>
+        {{ form_end(form) }}
+
+        {% if listing is defined %}
+            <a href="{{ path('app_listing_show', {'slug': listing.slug}) }}" class="btn btn-secondary mt-3">Retour à l'annonce</a>
+        {% endif %}
+    </div>
+{% endblock %}

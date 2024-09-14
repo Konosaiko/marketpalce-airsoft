@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Conversation avec {{ otherUser.username }}{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1>Conversation avec {{ otherUser.username }}</h1>
+
+        <div class="messages-container mb-4">
+            {% for message in messages %}
+                <div class="card mb-2 {% if message.sender == app.user %}text-right{% endif %}">
+                    <div class="card-body">
+                        <p class="card-text">{{ message.content }}</p>
+                        <small class="text-muted">{{ message.sentAt|date('d/m/Y H:i') }}</small>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button type="submit" class="btn btn-primary">Envoyer</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}
