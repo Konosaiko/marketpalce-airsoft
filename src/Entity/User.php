@@ -46,9 +46,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime')]
     private ?\DateTime $createdAt = null;
 
+    #[ORM\OneToMany(mappedBy: 'sender', targetEntity: Message::class, orphanRemoval: true)]
+    private Collection $sentMessages;
+
+    #[ORM\OneToMany(mappedBy: 'recipient', targetEntity: Message::class, orphanRemoval: true)]
+    private Collection $receivedMessages;
+
     public function __construct()
     {
         $this->sells = new ArrayCollection();
+        $this->sentMessages = new ArrayCollection();
+        $this->receivedMessages = new ArrayCollection();
         $this->createdAt = new \DateTime();
     }
 
@@ -206,5 +214,65 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCreatedAtValue(): void
     {
         $this->createdAt = new \DateTime();
+    }
+
+    /**
+     * @return Collection<int, Message>
+     */
+    public function getSentMessages(): Collection
+    {
+        return $this->sentMessages;
+    }
+
+    public function addSentMessage(Message $message): self
+    {
+        if (!$this->sentMessages->contains($message)) {
+            $this->sentMessages->add($message);
+            $message->setSender($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSentMessage(Message $message): self
+    {
+        if ($this->sentMessages->removeElement($message)) {
+            // set the owning side to null (unless already changed)
+            if ($message->getSender() === $this) {
+                $message->setSender(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Message>
+     */
+    public function getReceivedMessages(): Collection
+    {
+        return $this->receivedMessages;
+    }
+
+    public function addReceivedMessage(Message $message): self
+    {
+        if (!$this->receivedMessages->contains($message)) {
+            $this->receivedMessages->add($message);
+            $message->setRecipient($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReceivedMessage(Message $message): self
+    {
+        if ($this->receivedMessages->removeElement($message)) {
+            // set the owning side to null (unless already changed)
+            if ($message->getRecipient() === $this) {
+                $message->setRecipient(null);
+            }
+        }
+
+        return $this;
     }
 }
