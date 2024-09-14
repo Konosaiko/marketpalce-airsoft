@@ -5,6 +5,7 @@ namespace App\Tests\Service;
 use App\Entity\Listing;
 use App\Entity\User;
 use App\Service\ListingService;
+use App\Service\MessageService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\File\File;
@@ -17,17 +18,20 @@ class ListingServiceTest extends TestCase
 {
     private $entityManager;
     private $slugger;
+    private $messageService;
     private $listingService;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->slugger = $this->createMock(SluggerInterface::class);
+        $this->messageService = $this->createMock(MessageService::class);
 
         $this->listingService = new ListingService(
             $this->entityManager,
             $this->slugger,
-            '/tmp/listings_photos' // Répertoire temporaire pour les tests
+            '/tmp/listings_photos',
+            $this->messageService
         );
     }
 
@@ -94,5 +98,33 @@ class ListingServiceTest extends TestCase
         $this->assertInstanceOf(Listing::class, $createdListing);
         $this->assertEquals('test-listing-no-photo', $createdListing->getSlug());
         $this->assertCount(0, $createdListing->getListingPhotos());
+    }
+
+    public function testContactSeller()
+    {
+        $sender = new User();
+        $seller = new User();
+        $listing = new Listing();
+        $listing->setUser($seller);
+        $content = "Test message";
+
+        $this->messageService->expects($this->once())
+            ->method('sendMessage')
+            ->with($sender, $seller, $content);
+
+        $this->listingService->contactSeller($sender, $listing, $content);
+    }
+
+    public function testContactSellerThrowsExceptionWhenSenderIsSeller()
+    {
+        $user = new User();
+        $listing = new Listing();
+        $listing->setUser($user);
+        $content = "Test message";
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Vous ne pouvez pas vous envoyer un message à vous-même.');
+
+        $this->listingService->contactSeller($user, $listing, $content);
     }
 }

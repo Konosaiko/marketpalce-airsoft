@@ -37,6 +37,7 @@ class SearchTest extends KernelTestCase
         $user->setUsername($username);
         $user->setEmail($username . '@example.com');
         $user->setPassword('password');
+        $user->setCreatedAt(new \DateTimeImmutable());
         $this->entityManager->persist($user);
 
         $this->region = new Region();
