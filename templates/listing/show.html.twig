@@ -54,5 +54,12 @@
                 {% endif %}
             </div>
         </div>
+        <div class="mt-4">
+            {% if app.user and app.user != listing.user %}
+                <a href="{{ path('app_listing_contact', {'slug': listing.slug}) }}" class="btn btn-primary">Contacter le vendeur</a>
+            {% elseif not app.user %}
+                <a href="{{ path('app_login') }}" class="btn btn-secondary">Connectez-vous pour contacter le vendeur</a>
+            {% endif %}
+        </div>
     </div>
 {% endblock %}
