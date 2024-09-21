@@ -27,6 +27,27 @@ class Message
     #[ORM\Column]
     private ?\DateTimeImmutable $sentAt = null;
 
+    #[ORM\Column(name: "created_at", type: "datetime_immutable")]
+    private \DateTimeImmutable $createdAt;
+
+    public function __construct()
+    {
+        $this->createdAt = new \DateTimeImmutable();
+        $this->sentAt = new \DateTimeImmutable();
+        $this->isRead = false;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
     #[ORM\Column]
     private ?bool $isRead = false;
 
