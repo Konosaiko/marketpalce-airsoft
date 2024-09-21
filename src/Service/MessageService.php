@@ -2,20 +2,30 @@
 
 namespace App\Service;
 
+use AllowDynamicProperties;
 use App\Entity\Message;
 use App\Entity\User;
 use App\Repository\MessageRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
-class MessageService
+#[AllowDynamicProperties] class MessageService
 {
     private $entityManager;
+    private $userRepository;
     private $messageRepository;
 
-    public function __construct(EntityManagerInterface $entityManager, MessageRepository $messageRepository)
+    private $urlGenerator;
+
+    public function __construct(EntityManagerInterface $entityManager, MessageRepository $messageRepository, NotificationService $notificationService, UserRepository $userRepository, UrlGeneratorInterface $urlGenerator)
     {
         $this->entityManager = $entityManager;
         $this->messageRepository = $messageRepository;
+        $this->userRepository = $userRepository;
+        $this->notificationService = $notificationService;
+        $this->urlGenerator = $urlGenerator;
+
     }
 
     public function sendMessage(User $sender, User $recipient, string $content): Message
@@ -24,11 +34,17 @@ class MessageService
         $message->setSender($sender);
         $message->setRecipient($recipient);
         $message->setContent($content);
-        $message->setSentAt(new \DateTimeImmutable());
-        $message->setIsRead(false);
+        $message->setCreatedAt(new \DateTimeImmutable());
 
         $this->entityManager->persist($message);
         $this->entityManager->flush();
+
+        // Créer une notification pour le destinataire
+        $notificationMessage = "Vous avez reçu un nouveau message de {$sender->getUsername()}.";
+        $notificationLink = $this->urlGenerator->generate('app_messages_conversation', [
+            'id' => $recipient->getId()
+        ]);
+        $this->notificationService->createNotification($recipient, $notificationMessage, $notificationLink);
 
         return $message;
     }
@@ -57,15 +73,26 @@ class MessageService
 
     public function getUserConversations(User $user): array
     {
-        $sentMessages = $this->messageRepository->findBy(['sender' => $user], ['sentAt' => 'DESC']);
-        $receivedMessages = $this->messageRepository->findBy(['recipient' => $user], ['sentAt' => 'DESC']);
-
+        $conversationUserIds = $this->messageRepository->findUserConversations($user);
         $conversations = [];
-        foreach (array_merge($sentMessages, $receivedMessages) as $message) {
-            $otherUser = $message->getSender() === $user ? $message->getRecipient() : $message->getSender();
-            $conversations[$otherUser->getId()] = $otherUser;
+
+        foreach ($conversationUserIds as $result) {
+            $otherUserId = $result['otherUserId'];
+            $otherUser = $this->userRepository->find($otherUserId);
+            if ($otherUser) {
+                $conversations[$otherUserId] = $otherUser;
+            }
         }
 
         return $conversations;
+    }
+
+    public function markConversationAsRead(User $user, User $otherUser): void
+    {
+        $unreadMessages = $this->messageRepository->findUnreadMessagesInConversation($user, $otherUser);
+        foreach ($unreadMessages as $message) {
+            $message->setIsRead(true);
+        }
+        $this->entityManager->flush();
     }
 }
