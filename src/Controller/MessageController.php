@@ -50,6 +50,8 @@ class MessageController extends AbstractController
         $user = $this->getTypedUser();
         $messages = $this->messageService->getConversation($user, $otherUser);
 
+        $this->messageService->markConversationAsRead($user, $otherUser);
+
         $form = $this->createForm(MessageFormType::class);
         $form->handleRequest($request);
 
