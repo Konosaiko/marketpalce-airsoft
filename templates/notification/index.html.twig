@@ -1,0 +1,18 @@
+{# templates/notification/index.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <h1>Notifications</h1>
+    {% for notification in notifications %}
+        <div class="notification {% if not notification.isRead %}unread{% endif %}">
+            <p>{{ notification.message }}</p>
+            {% if notification.link %}
+                <a href="{{ notification.link }}">Voir plus</a>
+            {% endif %}
+            <small>{{ notification.createdAt|date('d/m/Y H:i') }}</small>
+            {% if not notification.isRead %}
+                <a href="{{ path('app_notification_mark_as_read', {'id': notification.id}) }}">Marquer comme lu</a>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% endblock %}
