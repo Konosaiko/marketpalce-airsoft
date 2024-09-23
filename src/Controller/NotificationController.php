@@ -13,6 +13,9 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 #[Route('/notifications')]
 class NotificationController extends AbstractController
 {
+    /**
+     * Display the list of unread notifications for the current user.
+     */
     #[Route('/', name: 'app_notifications')]
     public function index(NotificationService $notificationService): Response
     {
@@ -29,6 +32,9 @@ class NotificationController extends AbstractController
         ]);
     }
 
+    /**
+     * Mark a notification as read and redirect back to the notifications list.
+     */
     #[Route('/{id}/mark-as-read', name: 'app_notification_mark_as_read')]
     public function markAsRead(Notification $notification, NotificationService $notificationService): Response
     {

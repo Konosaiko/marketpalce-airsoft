@@ -11,6 +11,18 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class SearchController extends AbstractController
 {
+    /**
+     * Handle the search request and display results.
+     *
+     * This method creates and processes the search form, retrieves search results
+     * based on the submitted criteria, and handles sorting of the results.
+     *
+     * @Route("/search", name="app_listing_search")
+     *
+     * @param Request $request The current request
+     * @param ListingRepository $listingRepository Repository for Listing entities
+     * @return Response A response containing the search results and form
+     */
     #[Route('/search', name: 'app_listing_search')]
     public function search(Request $request, ListingRepository $listingRepository): Response
     {

@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Form\MessageFormType;
-use App\Form\MessageType;
 use App\Service\MessageService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,6 +23,7 @@ class MessageController extends AbstractController
         $this->messageService = $messageService;
     }
 
+
     private function getTypedUser(): User
     {
         $user = $this->getUser();
@@ -33,6 +33,9 @@ class MessageController extends AbstractController
         return $user;
     }
 
+    /**
+     * Display the list of conversations for the current user.
+     */
     #[Route('/', name: 'app_messages_index', methods: ['GET'])]
     public function index(): Response
     {
@@ -44,6 +47,9 @@ class MessageController extends AbstractController
         ]);
     }
 
+    /**
+     * Display and handle a conversation between two users.
+     */
     #[Route('/conversation/{id}', name: 'app_messages_conversation', methods: ['GET', 'POST'])]
     public function conversation(Request $request, User $otherUser): Response
     {
@@ -70,6 +76,9 @@ class MessageController extends AbstractController
         ]);
     }
 
+    /**
+     * Display the form to create a new message and handle form submission.
+     */
     #[Route('/new/{id}', name: 'app_messages_new', methods: ['GET', 'POST'])]
     public function new(Request $request, User $recipient): Response
     {

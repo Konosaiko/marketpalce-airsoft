@@ -15,6 +15,9 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 #[Route('/admin/category')]
 class CategoryController extends AbstractController
 {
+    /**
+     * Display a list of all categories.
+     */
     #[Route('/', name: 'app_category_index', methods: ['GET'])]
     public function index(CategoryRepository $categoryRepository): Response
     {
@@ -24,6 +27,9 @@ class CategoryController extends AbstractController
         ]);
     }
 
+    /**
+     * Display the form to create a new category and handle form submission.
+     */
     #[Route('/new', name: 'app_category_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
     {
@@ -46,6 +52,9 @@ class CategoryController extends AbstractController
         ]);
     }
 
+    /**
+     * Display the form to edit an existing category and handle form submission.
+     */
     #[Route('/{id}/edit', name: 'app_category_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Category $category, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
     {
@@ -66,6 +75,9 @@ class CategoryController extends AbstractController
         ]);
     }
 
+    /**
+     * Handle the deletion of a category.
+     */
     #[Route('/{id}', name: 'app_category_delete', methods: ['POST'])]
     public function delete(Request $request, Category $category, EntityManagerInterface $entityManager): Response
     {

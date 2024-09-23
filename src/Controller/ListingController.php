@@ -26,6 +26,9 @@ class ListingController extends AbstractController
         $this->listingService = $listingService;
     }
 
+    /**
+     * Display the form to create a new listing and handle form submission.
+     */
     #[Route('/new', name: 'app_listing_new')]
     #[IsGranted("ROLE_USER")]
     public function new(Request $request): Response
@@ -56,6 +59,9 @@ class ListingController extends AbstractController
         ]);
     }
 
+    /**
+     * Retrieve departments for a given region (AJAX endpoint).
+     */
     #[Route('/get-departments/{id}', name: 'app_get_departments', methods: ['GET'])]
     public function getDepartments(Region $region, DepartmentRepository $departmentRepository): JsonResponse
     {
@@ -68,6 +74,9 @@ class ListingController extends AbstractController
         return new JsonResponse($departmentsArray);
     }
 
+    /**
+     * Display the form to edit an existing listing and handle form submission.
+     */
     #[Route('/edit/{slug}', name: 'app_listing_edit')]
     public function edit(Request $request, Listing $listing): Response
     {
@@ -92,6 +101,9 @@ class ListingController extends AbstractController
         ]);
     }
 
+    /**
+     * Handle the deletion of a listing.
+     */
     #[Route('/delete/{slug}', name: 'app_listing_delete')]
     public function delete(Request $request, Listing $listing): Response
     {
@@ -107,6 +119,9 @@ class ListingController extends AbstractController
         return $this->redirectToRoute('app_home');
     }
 
+    /**
+     * Display details of a specific listing.
+     */
     #[Route('/{slug}', name: 'app_listing_show', methods: ['GET'])]
     public function show(Listing $listing): Response
     {
@@ -115,6 +130,9 @@ class ListingController extends AbstractController
         ]);
     }
 
+    /**
+     * Handle contacting the seller of a listing.
+     */
     #[Route('/{slug}/contact', name: 'app_listing_contact')]
     #[IsGranted('ROLE_USER')]
     public function contact(Request $request, Listing $listing): Response

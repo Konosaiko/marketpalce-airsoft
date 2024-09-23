@@ -22,6 +22,9 @@ class ProfileController extends AbstractController
         $this->profileService = $profileService;
     }
 
+    /**
+     * Display the profile of the current user.
+     */
     #[Route('', name: 'app_profile')]
     public function index(): Response
     {
@@ -39,6 +42,9 @@ class ProfileController extends AbstractController
         ]);
     }
 
+    /**
+     * Display the form to edit the current user's profile and handle form submission.
+     */
     #[Route('/edit', name: 'app_profile_edit')]
     public function edit(Request $request): Response
     {
