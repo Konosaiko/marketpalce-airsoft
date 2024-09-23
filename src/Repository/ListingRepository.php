@@ -18,6 +18,16 @@ class ListingRepository extends ServiceEntityRepository
         parent::__construct($registry, Listing::class);
     }
 
+    /**
+     * Search for listings based on various criteria.
+     *
+     * @param string|null $query The search query to match against title and description
+     * @param Region|null $region The region to filter by
+     * @param Department|null $department The department to filter by
+     * @param string|null $sortBy The field to sort by (default: 'createdAt')
+     * @param string $sortOrder The sort order ('ASC' or 'DESC', default: 'DESC')
+     * @return array An array of Listing entities matching the search criteria
+     */
     public function search(?string $query, ?Region $region, ?Department $department, ?string $sortBy = 'createdAt', string $sortOrder = 'DESC')
     {
         $qb = $this->createQueryBuilder('l');
