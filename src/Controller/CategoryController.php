@@ -17,14 +17,30 @@ class CategoryController extends AbstractController
     #[Route('', name: 'api_categories_index', methods: ['GET'])]
     public function index(CategoryRepository $categoryRepository): JsonResponse
     {
-        $categories = $categoryRepository->findAll();
-        $data = array_map(fn($category) => [
+        $categories = $categoryRepository->findBy(['parent' => null]);
+        $data = [];
+
+        foreach ($categories as $category) {
+            $data[] = $this->serializeCategory($category);
+        }
+
+        return $this->json($data);
+    }
+
+    private function serializeCategory(Category $category): array
+    {
+        $data = [
             'id' => $category->getId(),
             'name' => $category->getName(),
             'slug' => $category->getSlug(),
-        ], $categories);
+            'children' => [],
+        ];
 
-        return $this->json($data);
+        foreach ($category->getChildren() as $child) {
+            $data['children'][] = $this->serializeCategory($child);
+        }
+
+        return $data;
     }
 
     #[Route('/{id}', name: 'api_categories_show', methods: ['GET'])]
