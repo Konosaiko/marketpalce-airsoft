@@ -7,6 +7,7 @@ use App\Form\CategoryFormType;
 use App\Repository\CategoryRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -88,4 +89,25 @@ class CategoryController extends AbstractController
 
         return $this->redirectToRoute('app_category_index', [], Response::HTTP_SEE_OTHER);
     }
+
+    /**
+     * API endpoint to get all categories.
+     */
+    #[Route('/api/categories', name: 'api_categories', methods: ['GET'])]
+    public function apiGetCategories(CategoryRepository $categoryRepository): JsonResponse
+    {
+        $categories = $categoryRepository->findAll();
+
+        $data = [];
+        foreach ($categories as $category) {
+            $data[] = [
+                'id' => $category->getId(),
+                'name' => $category->getName(),
+                'slug' => $category->getSlug(),
+            ];
+        }
+
+        return $this->json($data);
+    }
+
 }
