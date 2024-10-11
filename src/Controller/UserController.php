@@ -7,16 +7,29 @@ use App\Form\RegistrationFormType;
 use App\Security\UserRoles;
 use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\User\UserProviderInterface;
+use Symfony\Component\Security\Csrf\TokenStorage\TokenStorageInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-#[Route('/user')]
+#[Route('/api')]
 class UserController extends AbstractController
 {
+    private $logger;
+
+    public function __construct(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
     /**
      * Handle user registration.
      *
@@ -28,34 +41,38 @@ class UserController extends AbstractController
      * @param Request $request The current request
      * @param UserPasswordHasherInterface $userPasswordHasher Service for hashing passwords
      * @param EntityManagerInterface $entityManager Doctrine entity manager
-     * @return Response A response containing the registration form or redirecting after successful registration
+     * @param ValidatorInterface $validator
+     * @return JsonResponse A response containing the registration form or redirecting after successful registration
      */
-    #[Route('/register', name: 'app_user_register')]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager): Response
+    #[Route('/register', name: 'app_user_register', methods: ['POST'])]
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, ValidatorInterface $validator): JsonResponse
     {
+        $data = json_decode($request->getContent(), true);
+
         $user = new User();
-        $form = $this->createForm(RegistrationFormType::class, $user);
-        $form->handleRequest($request);
+        $user->setUsername($data['username']);
+        $user->setEmail($data['email']);
+        $user->setPassword(
+            $userPasswordHasher->hashPassword(
+                $user,
+                $data['plainPassword']
+            )
+        );
+        $user->addRole(UserRoles::ROLE_USER);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $user->setPassword(
-                $userPasswordHasher->hashPassword(
-                    $user,
-                    $form->get('plainPassword')->getData()
-                )
-            );
-            $user->addRole(UserRoles::ROLE_USER);
-            $entityManager->persist($user);
-            $entityManager->flush();
-
-            // Ajouter envoi de mail de confirmation
-
-            return $this->redirectToRoute('app_home');
+        $errors = $validator->validate($user);
+        if (count($errors) > 0) {
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[] = $error->getMessage();
+            }
+            return new JsonResponse(['errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
         }
 
-        return $this->render('user/register.html.twig', [
-            'registrationForm' => $form->createView(),
-        ]);
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        return new JsonResponse(['message' => 'User registered successfully'], Response::HTTP_CREATED);
     }
 
     /**
@@ -65,22 +82,36 @@ class UserController extends AbstractController
      *
      * @Route("/login", name="app_login")
      *
-     * @param AuthenticationUtils $authenticationUtils Utilities for authentication
-     * @return Response A response containing the login form
+     * @param Request $request
+     * @param UserPasswordHasherInterface $passwordHasher
+     * @param EntityManagerInterface $entityManager
+     * @return JsonResponse A response containing the login form
      */
-    #[Route(path: '/login', name: 'app_login')]
-    public function login(AuthenticationUtils $authenticationUtils): Response
+    #[Route('/user/login', name: 'app_login', methods: ['POST'])]
+    public function login(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager): JsonResponse
     {
-        // get the login error if there is one
-        $error = $authenticationUtils->getLastAuthenticationError();
+        try {
+            $data = json_decode($request->getContent(), true);
+            $this->logger->info('Login attempt', ['username' => $data['username'] ?? 'not provided']);
 
-        // last username entered by the user
-        $lastUsername = $authenticationUtils->getLastUsername();
+            $username = $data['username'] ?? null;
+            $password = $data['password'] ?? null;
 
-        return $this->render('user/login.html.twig', [
-            'last_username' => $lastUsername,
-            'error' => $error,
-        ]);
+            if (!$username || !$password) {
+                return new JsonResponse(['message' => 'Username and password are required'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $user = $entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+
+            if (!$user || !$passwordHasher->isPasswordValid($user, $password)) {
+                return new JsonResponse(['message' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
+            }
+
+            return new JsonResponse(['message' => 'Login successful'], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            $this->logger->error('Login error: ' . $e->getMessage());
+            return new JsonResponse(['message' => 'An unexpected error occurred'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -96,5 +127,11 @@ class UserController extends AbstractController
     public function logout(): void
     {
         throw new LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+    }
+
+    #[Route('/login_check', name: 'api_login_check', methods: ['POST'])]
+    public function loginCheck()
+    {
+
     }
 }
