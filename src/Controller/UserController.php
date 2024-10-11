@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -133,5 +134,25 @@ class UserController extends AbstractController
     public function loginCheck()
     {
 
+    }
+
+    #[Route('/user/info', name: 'api_user_info', methods: ['GET', 'OPTIONS'])]
+    public function getUserInfo(): JsonResponse
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        }
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $user = $this->getUser();
+
+        if (!$user) {
+            throw new AccessDeniedException('User not found');
+        }
+
+        return $this->json([
+            'username' => $user->getUsername(),
+            'email' => $user->getEmail(),
+        ]);
     }
 }
