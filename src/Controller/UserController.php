@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\File\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -124,10 +125,16 @@ class UserController extends AbstractController
      *
      * @throws LogicException This method can be blank - it will be intercepted by the logout key on your firewall
      */
-    #[Route(path: '/logout', name: 'app_logout')]
-    public function logout(): void
+    #[Route('/logout', name: 'api_logout', methods: ['POST'])]
+    public function logout(Security $security): JsonResponse
     {
-        throw new LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+
+        error_log('Logout route hit');
+
+
+        $security->logout(false);
+
+        return new JsonResponse(['message' => 'Logged out successfully']);
     }
 
     #[Route('/login_check', name: 'api_login_check', methods: ['POST'])]
