@@ -12,19 +12,21 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Psr\Log\LoggerInterface;
 
-#[AllowDynamicProperties] class ListingService
+#[AllowDynamicProperties]
+class ListingService
 {
+    private $logger;
+
     public function __construct(
-        EntityManagerInterface $entityManager,
-        SluggerInterface $slugger,
-        string $listingsPhotoDirectory,
-        MessageService $messageService
+        private EntityManagerInterface $entityManager,
+        private SluggerInterface $slugger,
+        private string $listingsPhotoDirectory,
+        private MessageService $messageService,
+        LoggerInterface $logger
     ) {
-        $this->entityManager = $entityManager;
-        $this->slugger = $slugger;
-        $this->listingsPhotoDirectory = $listingsPhotoDirectory;
-        $this->messageService = $messageService;
+        $this->logger = $logger;
     }
 
 
@@ -37,16 +39,29 @@ use Symfony\Component\String\Slugger\SluggerInterface;
      */
     public function createListing(Listing $listing, User $user): Listing
     {
+        $this->logger->info('Début de createListing dans ListingService');
+
         $listing->setUser($user);
         $listing->setCreatedAt(new \DateTimeImmutable());
 
         $slug = $this->slugger->slug($listing->getTitle())->lower();
         $listing->setSlug($slug);
 
+        $this->logger->info('Avant handlePhotoUploads');
         $this->handlePhotoUploads($listing, $listing->getPhotoFiles());
+        $this->logger->info('Après handlePhotoUploads');
 
-        $this->entityManager->persist($listing);
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->persist($listing);
+            $this->entityManager->flush();
+            $this->logger->info('Annonce persistée avec succès', ['listing_id' => $listing->getId()]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la persistance de l\'annonce', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
 
         return $listing;
     }

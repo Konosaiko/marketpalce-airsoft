@@ -3,60 +3,90 @@
 namespace App\Controller;
 
 use App\Entity\Listing;
-use App\Entity\Region;
 use App\Entity\User;
-use App\Form\ListingFormType;
-use App\Form\MessageFormType;
-use App\Repository\DepartmentRepository;
 use App\Service\ListingService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Psr\Log\LoggerInterface;
 
-#[Route('/listing')]
+#[Route('/api/listing')]
 class ListingController extends AbstractController
 {
-    private ListingService $listingService;
+    private $entityManager;
+    private $listingService;
+    private $logger;
 
-    public function __construct(ListingService $listingService)
-    {
+    public function __construct(
+        EntityManagerInterface $entityManager,
+        ListingService $listingService,
+        LoggerInterface $logger
+    ) {
+        $this->entityManager = $entityManager;
         $this->listingService = $listingService;
+        $this->logger = $logger;
     }
 
-    /**
-     * Display the form to create a new listing and handle form submission.
-     */
-    #[Route('/new', name: 'app_listing_new')]
+    #[Route('/create', name: 'api_listing_create', methods: ['POST'])]
     #[IsGranted("ROLE_USER")]
-    public function new(Request $request): Response
+    public function apiCreate(Request $request): JsonResponse
     {
-        $form = $this->createForm(ListingFormType::class);
-        $form->handleRequest($request);
+        $this->logger->info('Début de la création d\'une annonce');
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        try {
+            /** @var User $user */
             $user = $this->getUser();
             if (!$user instanceof User) {
-                throw $this->createAccessDeniedException('Vous devez être connecté pour créer une annonce.');
+                $this->logger->warning('Tentative de création d\'annonce par un utilisateur non authentifié');
+                return new JsonResponse(['error' => 'Utilisateur non authentifié'], Response::HTTP_UNAUTHORIZED);
             }
 
-            $listingData = $form->getData();
-            $listingData->setRegion($form->get('region')->getData()->getName());
-            $listingData->setDepartment($form->get('department')->getData()->getName());
-            $listingData->setPhotoFiles($form->get('photoFiles')->getData());
+            $this->logger->info('Utilisateur authentifié', ['user_id' => $user->getId()]);
 
-            $this->listingService->createListing($listingData, $user);
+            $data = json_decode($request->getContent(), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $data = $request->request->all();
+            }
+            $this->logger->info('Données reçues', ['data' => $data]);
 
-            $this->addFlash('success', 'Annonce créée avec succès.');
+            $listing = new Listing();
+            $listing->setTitle($data['title']);
+            $listing->setDescription($data['description']);
+            $listing->setPrice($data['price']);
+            $listing->setState($data['state']);
+            $listing->setRegion($data['region']);
+            $listing->setDepartment($data['department']);
 
-            return $this->redirectToRoute('app_home');
+            // Gérer les catégories
+            if (isset($data['categories'])) {
+                $categories = is_array($data['categories']) ? $data['categories'] : [$data['categories']];
+                foreach ($categories as $categoryId) {
+                    $category = $this->entityManager->getReference('App\Entity\Category', $categoryId);
+                    $listing->addCategory($category);
+                }
+            }
+
+            // Gérer les photos
+            $photoFiles = $request->files->get('photoFiles');
+            if ($photoFiles) {
+                $listing->setPhotoFiles($photoFiles);
+            }
+
+            $this->listingService->createListing($listing, $user);
+            $this->logger->info('Annonce créée avec succès', ['listing_id' => $listing->getId()]);
+
+            return new JsonResponse(['message' => 'Annonce créée avec succès'], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la création de l\'annonce', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return new JsonResponse(['error' => 'Une erreur est survenue lors de la création de l\'annonce.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        return $this->render('listing/new.html.twig', [
-            'form' => $form->createView(),
-        ]);
     }
 
     /**
