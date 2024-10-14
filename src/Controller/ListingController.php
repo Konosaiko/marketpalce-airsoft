@@ -4,9 +4,11 @@ namespace App\Controller;
 
 use App\Entity\Listing;
 use App\Entity\User;
+use App\Repository\ListingRepository;
 use App\Service\ListingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -69,6 +71,36 @@ class ListingController extends AbstractController
             return new JsonResponse(['error' => 'Une erreur est survenue lors de la création de l\'annonce.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    #[Route('/recent', name: 'api_recent_listings', methods: ['GET'])]
+    public function getRecentListings(ListingRepository $listingRepository): JsonResponse
+    {
+        try {
+            $recentListings = $listingRepository->findRecentListings(10);
+            return $this->json($recentListings, 200, [], [
+                'groups' => ['listing:read', 'user:read']
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des annonces récentes', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json(['error' => 'Une erreur est survenue lors de la récupération des annonces.'], 500);
+        }
+    }
+
+    #[Route('/uploads/listing_photos/{filename}', name: 'get_listing_photo', methods: ['GET'])]
+    public function getListingPhoto(string $filename): BinaryFileResponse
+    {
+        $filePath = $this->getParameter('kernel.project_dir') . '/public/uploads/listing_photos/' . $filename;
+
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('L\'image demandée n\'existe pas');
+        }
+
+        return new BinaryFileResponse($filePath);
+    }
+
 
     /**
      * Retrieve departments for a given region (AJAX endpoint).
