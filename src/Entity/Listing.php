@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ListingRepository::class)]
 class Listing
@@ -15,48 +16,54 @@ class Listing
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(["listing:read"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["listing:read"])]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(["listing:read"])]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Groups(["listing:read"])]
     private ?float $price = null;
 
     #[ORM\Column(name: "created_at", type: "datetime_immutable")]
+    #[Groups(["listing:read"])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'sells')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(["listing:read"])]
     private ?User $user = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["listing:read"])]
     private ?string $state = null;
 
-    /**
-     * @var Collection<int, Category>
-     */
     #[ORM\ManyToMany(targetEntity: Category::class, inversedBy: 'listings')]
+    #[Groups(["listing:read"])]
     private Collection $categories;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["listing:read"])]
     private ?string $slug = null;
 
-    /**
-     * @var Collection<int, ListingPhoto>
-     */
     #[ORM\OneToMany(targetEntity: ListingPhoto::class, mappedBy: 'listing', cascade: ['persist'], orphanRemoval: true)]
+    #[Groups(["listing:read"])]
     private Collection $listingPhotos;
 
     private ?array $photoFiles = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["listing:read"])]
     private ?string $region = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["listing:read"])]
     private ?string $department = null;
 
     public function __construct()

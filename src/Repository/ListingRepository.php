@@ -59,4 +59,15 @@ class ListingRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getResult();
     }
+
+    public function findRecentListings(int $limit = 10): array
+    {
+        return $this->createQueryBuilder('l')
+            ->leftJoin('l.listingPhotos', 'lp')
+            ->addSelect('lp')
+            ->orderBy('l.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
 }

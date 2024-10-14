@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\ListingPhotoRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ListingPhotoRepository::class)]
 class ListingPhoto
@@ -14,6 +15,7 @@ class ListingPhoto
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["listing:read"])]
     private ?string $filename = null;
 
     #[ORM\ManyToOne(inversedBy: 'listingPhotos')]
