@@ -17,29 +17,17 @@ use Psr\Log\LoggerInterface;
 #[AllowDynamicProperties]
 class ListingService
 {
-    private $logger;
-
     public function __construct(
         private EntityManagerInterface $entityManager,
         private SluggerInterface $slugger,
         private string $listingsPhotoDirectory,
         private MessageService $messageService,
-        LoggerInterface $logger
-    ) {
-        $this->logger = $logger;
-    }
+        private LoggerInterface $logger
+    ) {}
 
-
-    /**
-     * Create a new listing.
-     *
-     * @param Listing $listing The listing to create
-     * @param User $user The user creating the listing
-     * @return Listing The created listing
-     */
     public function createListing(Listing $listing, User $user): Listing
     {
-        $this->logger->info('Début de createListing dans ListingService');
+        $this->logger->info('Création d\'une nouvelle annonce', ['user_id' => $user->getId()]);
 
         $listing->setUser($user);
         $listing->setCreatedAt(new \DateTimeImmutable());
@@ -47,23 +35,60 @@ class ListingService
         $slug = $this->slugger->slug($listing->getTitle())->lower();
         $listing->setSlug($slug);
 
-        $this->logger->info('Avant handlePhotoUploads');
         $this->handlePhotoUploads($listing, $listing->getPhotoFiles());
-        $this->logger->info('Après handlePhotoUploads');
 
         try {
             $this->entityManager->persist($listing);
             $this->entityManager->flush();
-            $this->logger->info('Annonce persistée avec succès', ['listing_id' => $listing->getId()]);
+            $this->logger->info('Annonce créée avec succès', ['listing_id' => $listing->getId()]);
         } catch (\Exception $e) {
-            $this->logger->error('Erreur lors de la persistance de l\'annonce', [
+            $this->logger->error('Erreur lors de la création de l\'annonce', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'user_id' => $user->getId()
             ]);
             throw $e;
         }
 
         return $listing;
+    }
+
+    private function handlePhotoUploads(Listing $listing, ?array $photoFiles): void
+    {
+        if ($photoFiles) {
+            foreach ($photoFiles as $photoFile) {
+                if ($photoFile instanceof UploadedFile) {
+                    try {
+                        $newFilename = $this->uploadPhoto($photoFile);
+                        $photo = new ListingPhoto();
+                        $photo->setFilename($newFilename);
+                        $listing->addListingPhoto($photo);
+                    } catch (RuntimeException $e) {
+                        $this->logger->warning('Échec de l\'upload d\'une photo', [
+                            'listing_id' => $listing->getId(),
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+        }
+    }
+
+    private function uploadPhoto(UploadedFile $photoFile): string
+    {
+        $originalFilename = pathinfo($photoFile->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeFilename = $this->slugger->slug($originalFilename);
+        $newFilename = $safeFilename.'-'.uniqid().'.'.$photoFile->guessExtension();
+
+        try {
+            $photoFile->move($this->listingsPhotoDirectory, $newFilename);
+            return $newFilename;
+        } catch (FileException $e) {
+            $this->logger->error('Erreur lors de l\'upload de l\'image', [
+                'filename' => $newFilename,
+                'error' => $e->getMessage()
+            ]);
+            throw new RuntimeException('Une erreur est survenue lors de l\'upload de l\'image.');
+        }
     }
 
     /**
@@ -81,48 +106,6 @@ class ListingService
         $this->entityManager->flush();
     }
 
-    /**
-     * Handle the upload of photos for a listing.
-     *
-     * @param Listing $listing The listing to add photos to
-     * @param array|null $photoFiles The array of uploaded photo files
-     */
-    private function handlePhotoUploads(Listing $listing, ?array $photoFiles): void
-    {
-        if ($photoFiles) {
-            foreach ($photoFiles as $photoFile) {
-                if ($photoFile instanceof UploadedFile) {
-                    $newFilename = $this->uploadPhoto($photoFile);
-
-                    $photo = new ListingPhoto();
-                    $photo->setFilename($newFilename);
-                    $listing->addListingPhoto($photo);
-                }
-            }
-        }
-    }
-
-    /**
-     * Upload a single photo file.
-     *
-     * @param UploadedFile $photoFile The file to upload
-     * @return string The new filename of the uploaded photo
-     * @throws RuntimeException If there's an error during upload
-     */
-    private function uploadPhoto(UploadedFile $photoFile): string
-    {
-        $originalFilename = pathinfo($photoFile->getClientOriginalName(), PATHINFO_FILENAME);
-        $safeFilename = $this->slugger->slug($originalFilename);
-        $newFilename = $safeFilename.'-'.uniqid().'.'.$photoFile->guessExtension();
-
-        try {
-            $photoFile->move($this->listingsPhotoDirectory, $newFilename);
-        } catch (FileException $e) {
-            throw new RuntimeException('Une erreur est survenue lors de l\'upload de l\'image.');
-        }
-
-        return $newFilename;
-    }
 
     /**
      * Allow a user to contact the seller of a listing.

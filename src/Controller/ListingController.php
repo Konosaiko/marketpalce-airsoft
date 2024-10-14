@@ -17,41 +17,25 @@ use Psr\Log\LoggerInterface;
 #[Route('/api/listing')]
 class ListingController extends AbstractController
 {
-    private $entityManager;
-    private $listingService;
-    private $logger;
-
     public function __construct(
-        EntityManagerInterface $entityManager,
-        ListingService $listingService,
-        LoggerInterface $logger
-    ) {
-        $this->entityManager = $entityManager;
-        $this->listingService = $listingService;
-        $this->logger = $logger;
-    }
+        private EntityManagerInterface $entityManager,
+        private ListingService $listingService,
+        private LoggerInterface $logger
+    ) {}
 
     #[Route('/create', name: 'api_listing_create', methods: ['POST'])]
     #[IsGranted("ROLE_USER")]
     public function apiCreate(Request $request): JsonResponse
     {
-        $this->logger->info('Début de la création d\'une annonce');
+        /** @var User $user */
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            $this->logger->warning('Tentative de création d\'annonce par un utilisateur non authentifié');
+            return new JsonResponse(['error' => 'Utilisateur non authentifié'], Response::HTTP_UNAUTHORIZED);
+        }
 
         try {
-            /** @var User $user */
-            $user = $this->getUser();
-            if (!$user instanceof User) {
-                $this->logger->warning('Tentative de création d\'annonce par un utilisateur non authentifié');
-                return new JsonResponse(['error' => 'Utilisateur non authentifié'], Response::HTTP_UNAUTHORIZED);
-            }
-
-            $this->logger->info('Utilisateur authentifié', ['user_id' => $user->getId()]);
-
-            $data = json_decode($request->getContent(), true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $data = $request->request->all();
-            }
-            $this->logger->info('Données reçues', ['data' => $data]);
+            $data = json_decode($request->getContent(), true) ?? $request->request->all();
 
             $listing = new Listing();
             $listing->setTitle($data['title']);
@@ -61,7 +45,6 @@ class ListingController extends AbstractController
             $listing->setRegion($data['region']);
             $listing->setDepartment($data['department']);
 
-            // Gérer les catégories
             if (isset($data['categories'])) {
                 $categories = is_array($data['categories']) ? $data['categories'] : [$data['categories']];
                 foreach ($categories as $categoryId) {
@@ -70,20 +53,18 @@ class ListingController extends AbstractController
                 }
             }
 
-            // Gérer les photos
             $photoFiles = $request->files->get('photoFiles');
             if ($photoFiles) {
                 $listing->setPhotoFiles($photoFiles);
             }
 
-            $this->listingService->createListing($listing, $user);
-            $this->logger->info('Annonce créée avec succès', ['listing_id' => $listing->getId()]);
+            $createdListing = $this->listingService->createListing($listing, $user);
 
-            return new JsonResponse(['message' => 'Annonce créée avec succès'], Response::HTTP_CREATED);
+            return new JsonResponse(['message' => 'Annonce créée avec succès', 'id' => $createdListing->getId()], Response::HTTP_CREATED);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la création de l\'annonce', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'user_id' => $user->getId(),
+                'error' => $e->getMessage()
             ]);
             return new JsonResponse(['error' => 'Une erreur est survenue lors de la création de l\'annonce.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
